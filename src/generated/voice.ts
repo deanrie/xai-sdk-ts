@@ -76,15 +76,14 @@ export type KnownVoiceId =
 export type VoiceId = KnownVoiceId | (string & {});
 
 export type KnownTranscriptionModelId =
-  | "grok-voice-transcribe-2.0"
-  | "grok-voice-transcribe-1.0";
+  | "grok-voice-transcribe-2.0";
 
 /** Known transcription model IDs, plus any other string for models added after this SDK. */
 export type TranscriptionModelId = KnownTranscriptionModelId | (string & {});
 
 export type KnownRealtimeModelId =
   | "grok-voice-latest"
-  | "grok-voice-think-fast-2.0";
+  | "grok-voice-3.0";
 
 /** Known realtime voice model IDs, plus any other string for models added after this SDK. */
 export type RealtimeModelId = KnownRealtimeModelId | (string & {});

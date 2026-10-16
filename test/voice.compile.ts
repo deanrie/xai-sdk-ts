@@ -123,7 +123,7 @@ export const unknownRealtimeModel: KnownRealtimeModelId = "grok-voice-think-slow
 
 export const transcriptionExamples = [
   { file: new Blob(["audio"]) },
-  { file: new File(["audio"], "call.wav"), model: "grok-voice-transcribe-1.0", keyterm: ["Grok"] },
+  { file: new File(["audio"], "call.wav"), model: "grok-voice-transcribe-2.0", keyterm: ["Grok"] },
   { url: "https://example.com/call.mp3", model: "grok-voice-transcribe-released-after-this-sdk" },
 ] satisfies Array<TranscriptionParams>;
 
@@ -145,7 +145,7 @@ export const clearedLabels = {
 export const clientSecretExamples = [
   {},
   { expires_after: { seconds: 300 }, session: null },
-  { session: { model: "grok-voice-think-fast-2.0", reasoning: { effort: "high" } } },
+  { session: { model: "grok-voice-3.0", reasoning: { effort: "high" } } },
   {
     session: {
       instructions: "You are a helpful assistant.",
