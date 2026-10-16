@@ -7,6 +7,7 @@ All notable changes to the SpaceXAI TypeScript SDK will be documented in this fi
 ### Added
 
 - `aspect_ratio` for `videos.generate()` accepts `"21:9"` and `"5:2"`.
+- `KnownRealtimeModelId` includes `"grok-voice-3.0"` and `"grok-voice-2.0"`. `"grok-voice-latest"` now points to `grok-voice-3.0`.
 
 ## [0.2.3] - 2026-10-07
 

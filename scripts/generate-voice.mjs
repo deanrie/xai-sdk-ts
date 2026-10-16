@@ -18,6 +18,14 @@ const SOURCES = {
   speechToText: `${DOCS}/model-capabilities/audio/speech-to-text.md`,
   speechToSpeech: `${DOCS}/model-capabilities/audio/speech-to-speech.md`,
 };
+/**
+ * Model IDs the docs no longer list but the API still accepts. Kept in the generated unions so
+ * existing callers keep type-checking. Remove once the API rejects them.
+ */
+const LEGACY_MODELS = {
+  transcription: ["grok-voice-transcribe-1.0"],
+  realtime: ["grok-voice-think-fast-2.0"],
+};
 const UA = "Mozilla/5.0 (compatible; xai-sdk-ts/0.1)";
 
 async function load(url) {
@@ -52,11 +60,15 @@ function collectVoiceIds(html, url) {
 
 function collectModelIds(markdown, url) {
   const section = markdown.split(/^## /m).find((part) => part.startsWith("Model Selection"));
-  const ids = [...(section ?? "").matchAll(/^\| `([^`]+)` \|/gm)].map((match) => match[1]);
+  const ids = [...(section ?? "").matchAll(/^\| `([^`]+)`\s*\|/gm)].map((match) => match[1]);
   if (ids.length === 0) {
     throw new Error(`no model table under "Model Selection" found in ${url}`);
   }
   return ids;
+}
+
+function withLegacy(ids, legacy) {
+  return [...ids, ...legacy.filter((id) => !ids.includes(id))];
 }
 
 function tuple(values) {
@@ -108,8 +120,14 @@ async function main() {
   const generated = {
     tags: collectTags(reference, SOURCES.reference),
     voiceIds: collectVoiceIds(textToSpeech, SOURCES.textToSpeech),
-    transcriptionModels: collectModelIds(speechToText, SOURCES.speechToText),
-    realtimeModels: collectModelIds(speechToSpeech, SOURCES.speechToSpeech),
+    transcriptionModels: withLegacy(
+      collectModelIds(speechToText, SOURCES.speechToText),
+      LEGACY_MODELS.transcription,
+    ),
+    realtimeModels: withLegacy(
+      collectModelIds(speechToSpeech, SOURCES.speechToSpeech),
+      LEGACY_MODELS.realtime,
+    ),
   };
   await writeFile(OUT, render(generated));
   console.error(

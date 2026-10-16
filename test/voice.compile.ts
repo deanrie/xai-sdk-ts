@@ -146,6 +146,8 @@ export const clientSecretExamples = [
   {},
   { expires_after: { seconds: 300 }, session: null },
   { session: { model: "grok-voice-think-fast-2.0", reasoning: { effort: "high" } } },
+  { session: { model: "grok-voice-3.0" } },
+  { session: { model: "grok-voice-2.0" } },
   {
     session: {
       instructions: "You are a helpful assistant.",
