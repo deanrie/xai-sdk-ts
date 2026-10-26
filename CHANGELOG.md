@@ -2,6 +2,12 @@
 
 All notable changes to the SpaceXAI TypeScript SDK will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- `timeout`, `idleTimeout`, and the `timeout` of `videos.wait()` and `batches.wait()` accept `Infinity` as "no limit", and a value past the timer range (about 24.8 days) waits as long as a timer can. Node and browsers keep a timer delay in a signed 32-bit integer and replace a larger one with 1 ms, so these values used to time out at once; an `interval` of `Infinity` used to poll every millisecond.
+
 ## [0.2.5] - 2026-10-23
 
 ### Changed
