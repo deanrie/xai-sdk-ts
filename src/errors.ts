@@ -122,9 +122,13 @@ export class OverloadedError extends APIStatusError {
 const DROPPED_REASONING_MESSAGE =
   "pass response.toInput() (or include encrypted reasoning)";
 
+/**
+ * Adds a hint to a 400 about encrypted reasoning, which usually means reasoning items were dropped between turns.
+ * The API's own message stays first, since the same 400 also covers content that can't be decrypted.
+ */
 export function rewriteStatusMessage(status: number, message: string): string {
-  if (status === 400 && /reason(ing)?|encrypted_content|encrypted reasoning/i.test(message)) {
-    return DROPPED_REASONING_MESSAGE;
+  if (status === 400 && /encrypted_content|encrypted reasoning/i.test(message)) {
+    return `${message}; ${DROPPED_REASONING_MESSAGE}`;
   }
   return message;
 }

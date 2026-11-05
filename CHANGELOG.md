@@ -4,6 +4,10 @@ All notable changes to the SpaceXSI TypeScript SDK will be documented in this fi
 
 ## [Unreleased]
 
+### Fixed
+
+- A `400` whose message mentions reasoning, such as `Model grok-4-0709 does not support parameter reasoningEffort.`, keeps the API's message. Any `400` that contained `reason` used to be replaced with `pass response.toInput() (or include encrypted reasoning)`, which hid the actual problem. A `400` about encrypted reasoning or `encrypted_content` keeps the API's message too, followed by that hint.
+
 ## [0.2.8] - 2026-11-03
 
 ### Added

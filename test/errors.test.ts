@@ -10,7 +10,7 @@ import {
   TimeoutError,
   SpaceXSI,
 } from "../src/index.js";
-import { createBody, jsonResponse, mockFetch } from "./helpers.js";
+import { createBody, jsonResponse, mockFetch, sseResponse } from "./helpers.js";
 
 describe("typed errors", () => {
   function client(status: number, body: unknown): SpaceXSI {
@@ -87,15 +87,61 @@ describe("typed errors", () => {
     }
   });
 
-  it("rewrites 400 dropped-reasoning messages", async () => {
+  it("adds a toInput() hint to 400 dropped-reasoning messages and keeps the API message", async () => {
+    for (const message of [
+      "missing encrypted reasoning content",
+      "Failed to decrypt encrypted_content of reasoning item rs_1",
+    ]) {
+      try {
+        await client(400, { error: { message } }).responses.create(createBody);
+        throw new Error("expected failure");
+      } catch (err) {
+        expect(APIError.is(err)).toBe(true);
+        expect((err as APIError).message).toBe(
+          `${message}; pass response.toInput() (or include encrypted reasoning)`,
+        );
+      }
+    }
+  });
+
+  it("keeps 400 messages that mention reasoning but not encrypted reasoning", async () => {
+    const messages = [
+      "Model grok-4-0709 does not support parameter reasoningEffort.",
+      "reasoning_effort must be one of: low, high",
+      "Reasoning is not supported for this model",
+      "Request rejected for the following reason: prompt too long",
+    ];
+    for (const message of messages) {
+      for (const body of [{ error: { message } }, { code: "Client specified an invalid argument", error: message }]) {
+        try {
+          await client(400, body).responses.create(createBody);
+          throw new Error("expected failure");
+        } catch (err) {
+          expect(APIError.is(err)).toBe(true);
+          expect((err as APIError).status).toBe(400);
+          expect((err as APIError).message).toBe(message);
+        }
+      }
+    }
+  });
+
+  it("keeps a 400 stream error message that mentions reasoning", async () => {
+    const message = "Model grok-4-0709 does not support parameter reasoningEffort.";
+    const { fetch } = mockFetch(() => sseResponse([{ type: "error", status: 400, error: { message } }]));
+    const stream = await new SpaceXSI({ apiKey: "k", fetch, maxRetries: 0 }).responses.create({
+      ...createBody,
+      stream: true,
+    });
+    await expect(stream.done()).rejects.toMatchObject({ status: 400, message });
+  });
+
+  it("leaves non-400 messages about encrypted reasoning unchanged", async () => {
+    const message = "encrypted_content service unavailable";
     try {
-      await client(400, { error: { message: "missing encrypted reasoning content" } }).responses.create(
-        createBody,
-      );
+      await client(500, { error: { message } }).responses.create({ ...createBody, stream: false });
       throw new Error("expected failure");
     } catch (err) {
-      expect(APIError.is(err)).toBe(true);
-      expect((err as APIError).message).toBe("pass response.toInput() (or include encrypted reasoning)");
+      expect((err as APIError).message).toBe(message);
     }
   });
 
