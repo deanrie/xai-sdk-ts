@@ -30,6 +30,21 @@ async function listen(handler: RequestListener): Promise<string> {
 }
 
 describe("native fetch integration", () => {
+  it("fails fast on a redirect with maxRetries > 0 and reports it as a redirect", async () => {
+    let hits = 0;
+    const baseURL = await listen((_request, response) => {
+      hits++;
+      response.writeHead(301, { location: "https://example.com/" });
+      response.end();
+    });
+    const client = new SpaceXSI({ apiKey: "test-key", baseURL, maxRetries: 3 });
+    await expect(client.models.list()).rejects.toSatisfy(
+      (err: unknown) => err instanceof APIConnectionError && /redirect/i.test((err as Error).message),
+    );
+    expect(hits).toBe(1);
+  });
+
+
   it("creates a response over a real HTTP socket", async () => {
     const baseURL = await listen((request, response) => {
       expect(request.method).toBe("POST");

@@ -253,8 +253,16 @@ function canRetryBeforeFirstByte(req: InternalRequest, budget: RetryBudget, erro
 }
 
 function isRedirectFailure(err: unknown): boolean {
-  const message = err instanceof Error ? err.message : String(err);
-  return /redirect/i.test(message);
+  // Node's fetch rejects a disallowed redirect as TypeError("fetch failed") and puts
+  // "unexpected redirect" in err.cause, so the message alone misses it. Walk the cause chain.
+  let e: unknown = err;
+  for (let depth = 0; e != null && depth < 10; depth++) {
+    const message = e instanceof Error ? e.message : typeof e === "string" ? e : "";
+    if (/redirect/i.test(message)) return true;
+    if (!(e instanceof Error)) break;
+    e = (e as { cause?: unknown }).cause;
+  }
+  return false;
 }
 
 class HookError extends Error {
@@ -476,7 +484,14 @@ async function sendWithRetries(
       if (APIError.is(err) && err.status !== undefined) throw err;
       if (signal?.aborted) throw errorFromAbort(signal, lastRequestId);
       if (err instanceof HookError) throw errorFromUnknown(err.cause, lastRequestId);
-      if (receivedResponse || isRedirectFailure(err)) {
+      if (isRedirectFailure(err)) {
+        if (APIError.is(err)) throw err;
+        throw new APIConnectionError("Request was redirected, which is not allowed", {
+          requestId: lastRequestId,
+          cause: err,
+        });
+      }
+      if (receivedResponse) {
         if (APIError.is(err)) throw err;
         throw errorFromUnknown(err, lastRequestId);
       }
