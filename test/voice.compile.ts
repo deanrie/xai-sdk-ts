@@ -54,6 +54,13 @@ export async function speechTagChecks(client: SpaceXSI) {
   await client.voice.speak({ text: "Hi [laff] there.", language: "en" });
   // @ts-expect-error Markup is not a speech tag.
   await client.voice.speak({ text: 'Grok said so.<citation id="web:23"/>', language: "en" });
+  // @ts-expect-error a bad literal in a union (ternary) is still rejected
+  await client.voice.speak({ text: Math.random() > 0.5 ? "Hi [laff] there." : "Hi there.", language: "en" });
+  const lines = ["Hi [laff] there.", "Hi there."] as const;
+  for (const text of lines) {
+    // @ts-expect-error a bad literal from a readonly list is still rejected
+    await client.voice.speak({ text, language: "en" });
+  }
 }
 
 type Newer = " For a tag newer than this SDK, add `as UnsafeSpeechText` to the text.";

@@ -247,10 +247,14 @@ export type UnsafeSpeechText = string;
  */
 export type SpeechText<T extends string> = string extends T
   ? T
-  : [...InlineProblems<T>, ...WrappingProblems<T>] extends infer Problems extends Array<string>
-    ? Problems extends []
-      ? T
-      : Message<Problems>
+  : // Distribute over a union of literals so each member is checked on its own. Without this a
+    // union like `"a [laff]" | "a"` collapses to `T | Message`, which still accepts the bad member.
+    T extends string
+    ? [...InlineProblems<T>, ...WrappingProblems<T>] extends infer Problems extends Array<string>
+      ? Problems extends []
+        ? T
+        : Message<Problems>
+      : never
     : never;
 
 const INLINE = new Set<string>(INLINE_SPEECH_TAGS);
