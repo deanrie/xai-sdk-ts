@@ -121,6 +121,28 @@ describe("abort", () => {
     );
   });
 
+  it("maps a custom string abort reason mid-stream to AbortError", async () => {
+    const ac = new AbortController();
+    const { fetch } = mockFetch(() =>
+      sseResponse(
+        [{ type: "response.created", response: { id: "resp_s", status: "in_progress", output: [] } }],
+        { hang: true },
+      ),
+    );
+    const client = new SpaceXSI({ apiKey: "test-key", fetch, maxRetries: 0 });
+    const stream = await client.responses.create({ ...createBody, stream: true }, { signal: ac.signal });
+    const iter = stream[Symbol.asyncIterator]();
+    await iter.next();
+    ac.abort("user cancelled");
+    await expect(iter.next()).rejects.toSatisfy(
+      (err: unknown) =>
+        APIError.is(err) &&
+        err.isAbort() &&
+        err instanceof AbortError &&
+        err.message === "user cancelled",
+    );
+  });
+
   it("closes the socket explicitly", async () => {
     let cancelled = false;
     const encoder = new TextEncoder();

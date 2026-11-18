@@ -10,6 +10,7 @@ import {
   APIConnectionError,
   APIProtocolError,
   TimeoutError,
+  errorFromAbort,
   errorFromUnknown,
   streamErrorEvent,
   withClientRequestId,
@@ -294,7 +295,7 @@ export class ResponseStream implements AsyncIterable<ResponseStreamEvent> {
     } catch (err) {
       const mapped = withClientRequestId(
         this.#signal?.aborted
-          ? errorFromUnknown(this.#signal.reason ?? err, this.#requestId)
+          ? errorFromAbort(this.#signal, this.#requestId)
           : errorFromUnknown(err, this.#requestId),
         this.http.clientRequestId,
       );
