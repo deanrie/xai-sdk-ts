@@ -12,7 +12,11 @@ describe("checkSpeechText", () => {
       ["Hi [laff] there.", ["Unknown speech tag [laff], did you mean [laugh]?"]],
       [
         "Hi [laff] there. <wisper>Quiet.</wisper>",
-        ["Unknown speech tag [laff], did you mean [laugh]?", "Unknown speech tag <wisper>, did you mean <whisper>?"],
+        [
+          "Unknown speech tag [laff], did you mean [laugh]?",
+          "Unknown speech tag <wisper>, did you mean <whisper>?",
+          "Unknown speech tag </wisper>, did you mean </whisper>?",
+        ],
       ],
       ["Then a [door-creak] sounded.", ["Unknown speech tag [door-creak]."]],
       [
@@ -23,7 +27,16 @@ describe("checkSpeechText", () => {
           "Unknown speech tag [long-paws], did you mean [long-pause]?",
         ],
       ],
-      ["<lower>Listen.</lower>", ["Unknown speech tag <lower>, did you mean <lower-pitch>?"]],
+      [
+        "<lower>Listen.</lower>",
+        [
+          "Unknown speech tag <lower>, did you mean <lower-pitch>?",
+          "Unknown speech tag </lower>, did you mean </lower-pitch>?",
+        ],
+      ],
+      // An unclosed non-wrapping tag inside a wrapper no longer drops the wrapper (issue #42).
+      ["<whisper>It is a secret.<br>Tell no one.</whisper>", ["Unknown speech tag <br>."]],
+      ["<slow>Soft <p>and</slow> gentle.", ["Unknown speech tag <p>."]],
       ["Wait [whisper] now.", ["[whisper] is a wrapping tag, use <whisper>…</whisper>."]],
       ["Wait <pause> now.", ["<pause> is an inline tag, use [pause]."]],
       ["<whisper>It is a secret.", ["<whisper> is never closed."]],
@@ -32,7 +45,12 @@ describe("checkSpeechText", () => {
       ["<slow><soft>Goodnight.</slow></soft>", ["Close <soft> before </slow>."]],
       [
         'Grok said so.<citation id="web:23"/> <b>Bold</b> </grok:render>',
-        ['<citation id="web:23"/> is not a speech tag.', "Unknown speech tag <b>.", "</grok:render> is not a speech tag."],
+        [
+          '<citation id="web:23"/> is not a speech tag.',
+          "Unknown speech tag <b>.",
+          "Unknown speech tag </b>.",
+          "</grok:render> is not a speech tag.",
+        ],
       ],
       [
         '<whisper volume="low">Quiet.</whisper> <pause/>',
@@ -86,6 +104,9 @@ describe("stripInvalidSpeechTags", () => {
       ],
       ['<whisper volume="low">Quiet.</whisper> <pause/> <grok:render type="x">23</grok:render>', "Quiet.  23"],
       ['<a title="[laff]">Link</a>', "Link"],
+      // issue #42: the wrapper survives; the unknown tag inside it is removed.
+      ["<whisper>It is a secret.<br>Tell no one.</whisper>", "<whisper>It is a secret.Tell no one.</whisper>"],
+      ["<slow>Soft <p>and</slow> gentle.", "<slow>Soft and</slow> gentle."],
     ];
     for (const [text, stripped] of cases) {
       expect(stripInvalidSpeechTags(text), text).toBe(stripped);

@@ -63,7 +63,7 @@ export type SpeechTagMessages = [
   Assert<
     Equals<
       SpeechText<"Hi [laff] there. <wisper>Quiet.</wisper>">,
-      `Unknown speech tag [laff], did you mean [laugh]? Unknown speech tag <wisper>, did you mean <whisper>?${Newer}`
+      `Unknown speech tag [laff], did you mean [laugh]? Unknown speech tag <wisper>, did you mean <whisper>? Unknown speech tag </wisper>, did you mean </whisper>?${Newer}`
     >
   >,
   Assert<Equals<SpeechText<"Then a [door-creak] sounded.">, `Unknown speech tag [door-creak].${Newer}`>>,
@@ -82,7 +82,7 @@ export type SpeechTagMessages = [
   Assert<Equals<SpeechText<"He said it was fine [sic].">, "He said it was fine [sic].">>,
   Assert<Equals<SpeechText<"Then the [music] started.">, "Then the [music] started.">>,
   Assert<
-    Equals<SpeechText<"<lower>Listen.</lower>">, `Unknown speech tag <lower>, did you mean <lower-pitch>?${Newer}`>
+    Equals<SpeechText<"<lower>Listen.</lower>">, `Unknown speech tag <lower>, did you mean <lower-pitch>? Unknown speech tag </lower>, did you mean </lower-pitch>?${Newer}`>
   >,
   Assert<Equals<SpeechText<"Wait [whisper] now.">, "[whisper] is a wrapping tag, use <whisper>…</whisper>.">>,
   Assert<Equals<SpeechText<"Wait <pause> now.">, "<pause> is an inline tag, use [pause].">>,
@@ -92,7 +92,7 @@ export type SpeechTagMessages = [
   Assert<
     Equals<
       SpeechText<'Grok said so.<citation id="web:23"/> <b>Bold</b> </grok:render>'>,
-      `<citation id="web:23"/> is not a speech tag. Unknown speech tag <b>. </grok:render> is not a speech tag.${Newer}`
+      `<citation id="web:23"/> is not a speech tag. Unknown speech tag <b>. Unknown speech tag </b>. </grok:render> is not a speech tag.${Newer}`
     >
   >,
   Assert<

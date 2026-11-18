@@ -212,12 +212,9 @@ type WrappingProblems<
             : never
           : MarkupProblems<After, Raw, Rest, Open, Found, Steps>
         : IsTagName<Raw> extends true
-          ? WrappingProblems<
-              Rest,
-              [...Open, Raw],
-              Raw extends WrappingTag ? Found : [...Found, UnknownWrapping<`<${Raw}>`, Raw, "<">],
-              [...Steps, 0]
-            >
+          ? Raw extends WrappingTag
+            ? WrappingProblems<Rest, [...Open, Raw], Found, [...Steps, 0]>
+            : WrappingProblems<Rest, Open, [...Found, UnknownWrapping<`<${Raw}>`, Raw, "<">], [...Steps, 0]>
           : MarkupProblems<After, Raw, Rest, Open, Found, Steps>
       : [...Found, ...NeverClosed<Open>]
     : [...Found, ...NeverClosed<Open>];
@@ -352,8 +349,13 @@ export function checkSpeechText(text: string): Array<string> {
       continue;
     }
     if (kind === "open") {
+      // A non-wrapping open tag (unknown, or an inline name) is reported and removed, not pushed
+      // onto the nesting stack, so it can't make a surrounding wrapper's close look misnested.
+      if (!WRAPPING.has(name)) {
+        problems.push(unknownWrapping(`<${name}>`, name, "<"));
+        continue;
+      }
       open.push(name);
-      if (!WRAPPING.has(name)) problems.push(unknownWrapping(`<${name}>`, name, "<"));
       continue;
     }
     const index = open.lastIndexOf(name);
@@ -382,6 +384,11 @@ function stripOnce(text: string): string {
     } else if (tag.kind === "markup") {
       drop.add(tag);
     } else if (tag.kind === "open") {
+      // Mirror checkSpeechText: a non-wrapping open tag is dropped, not nested.
+      if (!WRAPPING.has(tag.name)) {
+        drop.add(tag);
+        continue;
+      }
       open.push(tag);
     } else {
       const index = open.findLastIndex((opener) => opener.name === tag.name);
