@@ -512,6 +512,11 @@ export type TokenizeParams = Omit<Schema["TokenizeRequest"], "model" | "text"> &
 export type Token = Schema["TokenizeResponseToken"];
 export type TokenizeResponse = Schema["TokenizeResponse"];
 
+/**
+ * Receives `request.clone()` before it is sent. The request carries the live `Authorization:
+ * Bearer <apiKey>` header (and any `defaultHeaders`), so do not log it as is — redact credential
+ * headers first. The hook must not mutate anything it shouldn't; it is for observation.
+ */
 export type RequestHook = (request: Request) => void | Promise<void>;
 /** Receives `response.clone()`, which is cancelled after the hook returns. */
 export type ResponseHook = (response: Response) => void | Promise<void>;
@@ -546,6 +551,7 @@ export type ClientOptions = {
    */
   retryBeforeOutput?: boolean;
   defaultHeaders?: Record<string, string>;
+  /** Called with a clone of each request before it is sent. The request includes the `Authorization` header — see {@link RequestHook}. */
   onRequest?: RequestHook;
   onResponse?: ResponseHook;
 };
