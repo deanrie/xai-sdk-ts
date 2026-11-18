@@ -86,6 +86,12 @@ describe("stripInvalidSpeechTags", () => {
       ],
       ['<whisper volume="low">Quiet.</whisper> <pause/> <grok:render type="x">23</grok:render>', "Quiet.  23"],
       ['<a title="[laff]">Link</a>', "Link"],
+      // A removed tag between two words keeps them apart (issue #45).
+      ["Line one<br/>Line two", "Line one Line two"],
+      ["Ready[laff]set go", "Ready set go"],
+      ['See the docs<citation id="web:1"/>and the blog', "See the docs and the blog"],
+      // No spurious space when a side is punctuation or a kept tag.
+      ["word[laff].", "word."],
     ];
     for (const [text, stripped] of cases) {
       expect(stripInvalidSpeechTags(text), text).toBe(stripped);

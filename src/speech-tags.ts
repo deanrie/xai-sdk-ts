@@ -404,6 +404,14 @@ function stripOnce(text: string): string {
     // A bracketed tag can sit inside markup, such as in an attribute, and goes with it.
     if (!drop.has(tag) || tag.start < last) continue;
     out += text.slice(last, tag.start);
+    // Keep the words on either side of a removed tag apart: if the characters now adjacent are
+    // both non-space, insert one space so e.g. "Line one<br/>Line two" doesn't become one word.
+    const before = out[out.length - 1];
+    const after = text[tag.end];
+    const isWord = (c: string | undefined) => c !== undefined && /[\p{L}\p{N}]/u.test(c);
+    if (isWord(before) && isWord(after)) {
+      out += " ";
+    }
     last = tag.end;
   }
   return out + text.slice(last);
