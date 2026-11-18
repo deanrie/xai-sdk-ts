@@ -287,14 +287,24 @@ export type BatchWaitOptions = {
   signal?: AbortSignal;
 };
 
+/** SDK-level fields the image request methods accept beyond the raw request schema. */
+type BatchImageExtras = { quality?: "low" | "medium" | "auto" | null };
+
 export type BatchRequest = {
   /** Must be unique within the batch; generated when omitted. Results arrive in any order. */
   batch_request_id?: string | null;
   batch_request:
     | { responses: CreateParams }
-    | { image_generation: Schema["GenerateImageRequest"] }
-    | { image_edit: Schema["EditImageRequest"] }
-    | { video_generation: Schema["GenerateVideoRequest"] | Schema["EditVideoRequest"] }
+    // The raw request schemas omit a few SDK-level fields that the matching methods accept
+    // (`quality` on image requests, `last_frame` on video generation). Batches carry media as
+    // URLs only (no Blob/File inlining), so the schema `image`/`video` url shapes are kept as-is.
+    | { image_generation: Schema["GenerateImageRequest"] & BatchImageExtras }
+    | { image_edit: Schema["EditImageRequest"] & BatchImageExtras }
+    | {
+        video_generation:
+          | (Schema["GenerateVideoRequest"] & { last_frame?: Schema["ImageUrl"] | null })
+          | Schema["EditVideoRequest"];
+      }
     | { video_extension: Schema["ExtendVideoRequest"] };
 };
 

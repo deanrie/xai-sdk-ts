@@ -99,6 +99,38 @@ export const batchRequestExamples = [
       },
     },
   },
+  {
+    batch_request_id: "img_quality_001",
+    batch_request: {
+      image_generation: {
+        model: "grok-imagine-image-2.0",
+        prompt: "A lighthouse",
+        quality: "low",
+      },
+    },
+  },
+  {
+    batch_request_id: "img_edit_quality_001",
+    batch_request: {
+      image_edit: {
+        model: "grok-imagine-image-2.0",
+        prompt: "Add a rainbow",
+        image: { url: "https://picsum.photos/800" },
+        quality: "low",
+      },
+    },
+  },
+  {
+    batch_request_id: "vid_last_frame_001",
+    batch_request: {
+      video_generation: {
+        model: "grok-imagine-video-1.5",
+        prompt: "pan",
+        image: { url: "https://e.x/a.png" },
+        last_frame: { url: "https://e.x/b.png" },
+      },
+    },
+  },
 ] satisfies Array<BatchRequest>;
 
 // @ts-expect-error Batch requests wrap only the documented request types.
