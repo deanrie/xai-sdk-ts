@@ -95,7 +95,20 @@ describe("typed errors", () => {
       throw new Error("expected failure");
     } catch (err) {
       expect(APIError.is(err)).toBe(true);
-      expect((err as APIError).message).toBe("pass response.toInput() (or include encrypted reasoning)");
+      expect((err as APIError).message).toBe(
+        "missing encrypted reasoning content (pass response.toInput() (or include encrypted reasoning))",
+      );
+    }
+  });
+
+  it("keeps the server message for an unrelated 400 that mentions reasoning", async () => {
+    const message = "Model grok-4-0709 does not support parameter reasoningEffort.";
+    try {
+      await client(400, { error: { message } }).responses.create(createBody);
+      throw new Error("expected failure");
+    } catch (err) {
+      expect(APIError.is(err)).toBe(true);
+      expect((err as APIError).message).toBe(message);
     }
   });
 

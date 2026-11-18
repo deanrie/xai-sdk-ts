@@ -123,8 +123,12 @@ const DROPPED_REASONING_MESSAGE =
   "pass response.toInput() (or include encrypted reasoning)";
 
 export function rewriteStatusMessage(status: number, message: string): string {
-  if (status === 400 && /reason(ing)?|encrypted_content|encrypted reasoning/i.test(message)) {
-    return DROPPED_REASONING_MESSAGE;
+  // Only the dropped-encrypted-reasoning error gets the hint, and it is appended so the
+  // server's own message is preserved. The previous `/reason(ing)?/` match rewrote every
+  // 400 that merely mentioned "reason" (e.g. an unsupported `reasoning` parameter or a
+  // `reasoning.effort` validation error), discarding the real message.
+  if (status === 400 && /encrypted[_ ]?content|encrypted reasoning/i.test(message)) {
+    return `${message} (${DROPPED_REASONING_MESSAGE})`;
   }
   return message;
 }
