@@ -292,6 +292,11 @@ export class ResponseStream implements AsyncIterable<ResponseStreamEvent> {
         });
       }
     } catch (err) {
+      // A transport or timeout failure after the terminal response has already been applied
+      // must not discard it: the response completed (and was billed), and the caller has it.
+      if (this.#final && !this.#error) {
+        return;
+      }
       const mapped = withClientRequestId(
         this.#signal?.aborted
           ? errorFromUnknown(this.#signal.reason ?? err, this.#requestId)

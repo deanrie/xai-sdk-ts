@@ -538,3 +538,45 @@ describe("stream.on and stream.done", () => {
     await stream.close();
   });
 });
+
+describe("completed response survives a late transport error", () => {
+  function completedThenError(): Response {
+    const encoder = new TextEncoder();
+    let step = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (step++ === 0) {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: "response.completed", response: completedResponse })}\n\n`),
+          );
+          return;
+        }
+        // Connection reset after the terminal event, before EOF / [DONE].
+        controller.error(new TypeError("terminated: other side closed"));
+      },
+    });
+    return new Response(stream, {
+      status: 200,
+      headers: { "content-type": "text/event-stream", "x-request-id": "req_test" },
+    });
+  }
+
+  it("create() resolves to the completed response despite a reset before EOF", async () => {
+    const { fetch } = mockFetch(() => completedThenError());
+    const client = new SpaceXSI({ apiKey: "test-key", fetch, maxRetries: 0 });
+    const response = await client.responses.create({ ...createBody });
+    expect(response.status).toBe("completed");
+    expect(response.id).toBe("resp_123");
+  });
+
+  it("stream done() resolves to the completed response despite a reset before EOF", async () => {
+    const { fetch } = mockFetch(() => completedThenError());
+    const client = new SpaceXSI({ apiKey: "test-key", fetch, maxRetries: 0 });
+    const stream = await client.responses.create({ ...createBody, stream: true });
+    for await (const _ of stream) {
+      // drain
+    }
+    const response = await stream.done();
+    expect(response.status).toBe("completed");
+  });
+});
