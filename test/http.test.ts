@@ -72,6 +72,24 @@ describe("http helpers", () => {
     const multipartCurl = formatCurl("POST", "https://api.x.ai/v1/files", headers, new FormData());
     expect(multipartCurl).toContain("Request body omitted");
   });
+
+  it("redacts gateway credential headers not on a denylist", () => {
+    const headers = new Headers({
+      "ocp-apim-subscription-key": "APIM-SECRET",
+      "x-functions-key": "AZFUNC-SECRET",
+      "x-vercel-protection-bypass": "VERCEL-SECRET",
+      "x-signature": "SIG-SECRET",
+      accept: "application/json",
+      "content-type": "application/json",
+    });
+    const curl = formatCurl("POST", "https://api.x.ai/v1/responses", headers, undefined);
+    for (const secret of ["APIM-SECRET", "AZFUNC-SECRET", "VERCEL-SECRET", "SIG-SECRET"]) {
+      expect(curl).not.toContain(secret);
+    }
+    expect(curl).toContain("ocp-apim-subscription-key: [REDACTED]");
+    expect(curl).toContain("accept: application/json");
+    expect(curl).toContain("content-type: application/json");
+  });
 });
 
 describe("http send", () => {

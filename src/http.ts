@@ -37,13 +37,18 @@ export function joinURL(base: string, path: string): string {
   return `${b}${p}`;
 }
 
-const REDACT_HEADERS = new Set([
-  "authorization",
-  "proxy-authorization",
-  "cookie",
-  "set-cookie",
-  "x-api-key",
-  "api-key",
+// Printed verbatim in XAI_DEBUG curl output. Everything else is redacted, so a credential header
+// the SDK doesn't know about (gateway keys like `ocp-apim-subscription-key`, `x-functions-key`,
+// signatures, bypass tokens) can't leak through a denylist gap.
+const SAFE_DEBUG_HEADERS = new Set([
+  "accept",
+  "accept-encoding",
+  "content-type",
+  "content-length",
+  "user-agent",
+  "x-client-request-id",
+  "xai-sdk-version",
+  "xai-sdk-language",
 ]);
 
 function redactUrl(url: string): string {
@@ -64,11 +69,8 @@ function redactUrl(url: string): string {
 
 function redactHeader(key: string, value: string): string {
   const normalized = key.toLowerCase();
-  const sensitive =
-    REDACT_HEADERS.has(normalized) ||
-    /(?:auth|token|secret|api[-_]?key|cookie|credential|session)/i.test(normalized);
-  if (!sensitive) return value;
   if (normalized === "authorization" && /^bearer\s+/i.test(value)) return "Bearer [REDACTED]";
+  if (SAFE_DEBUG_HEADERS.has(normalized)) return value;
   return "[REDACTED]";
 }
 
