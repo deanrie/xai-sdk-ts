@@ -234,6 +234,9 @@ export function withQuery(url: string, query?: Record<string, string | number | 
 function timeoutSignal(ms: number): { signal: AbortSignal; cleanup: () => void } {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(new TimeoutError("Request timed out")), limitMs(ms));
+  // A dangling timer must not keep the process alive on its own: the in-flight fetch keeps the
+  // event loop running while the request is live, and once it settles the timer is cleared.
+  (timer as { unref?: () => void }).unref?.();
   return { signal: controller.signal, cleanup: () => clearTimeout(timer) };
 }
 
@@ -368,13 +371,21 @@ async function sendWithRetries(
       throw errorFromAbort(signal, lastRequestId);
     }
 
-    const request = new Request(url, {
-      method: req.method,
-      headers,
-      body,
-      signal,
-      redirect: "error",
-    });
+    let request: Request;
+    try {
+      request = new Request(url, {
+        method: req.method,
+        headers,
+        body,
+        signal,
+        redirect: "error",
+      });
+    } catch (err) {
+      // e.g. an invalid URL from a misconfigured baseURL. Clear the attempt's timer so the
+      // failure doesn't leave it armed and keep the process alive until the timeout fires.
+      cleanupAttempt();
+      throw err;
+    }
     if (debugEnabled()) {
       console.error(formatCurl(req.method, url, headers, body));
     }
@@ -620,6 +631,7 @@ async function readOnce(
       void reader.cancel().catch(() => {});
       finish(() => reject(new TimeoutError("Idle timeout", { requestId })));
     }, limitMs(idleTimeout));
+    (idle as { unref?: () => void }).unref?.();
     reader.read().then(
       (value) => finish(() => resolve(value)),
       (err) => finish(() => reject(err)),
