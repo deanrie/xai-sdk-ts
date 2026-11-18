@@ -328,6 +328,7 @@ export class ResponseStream implements AsyncIterable<ResponseStreamEvent> {
         maxEventChars: this.#maxEventChars,
       });
       for await (const raw of sse) {
+        if (this.#closed) break;
         const event = this.#normalize(raw);
         if (holding) {
           if (isLifecycleEvent(event)) {

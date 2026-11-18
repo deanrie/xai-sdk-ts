@@ -29,8 +29,15 @@ export async function* parseSse(
   let buf = "";
   // The last characters of `buf`, where a delimiter that the next chunk completes would start.
   let bufEnd = "";
+  // Cancel the body as soon as close() aborts, even while this generator is suspended at a `yield`
+  // between the consumer's `next()` calls — at that point readChunk isn't pending to notice the abort.
+  const onClose = () => {
+    void reader.cancel().catch(() => {});
+  };
+  opts.closeSignal?.addEventListener("abort", onClose, { once: true });
   try {
     while (true) {
+      if (opts.closeSignal?.aborted) return;
       const chunk = await readChunk(reader, opts.closeSignal);
       if (!chunk) return;
       const { done, value } = chunk;
@@ -39,10 +46,11 @@ export async function* parseSse(
         const flushed = flushBlocks(buf + decoder.decode(), maxChars);
         assertEventSize(flushed.rest, maxChars);
         for (const item of flushed.items) {
+          if (opts.closeSignal?.aborted) return;
           if (item === SSE_DONE) return;
           yield item;
         }
-        if (flushed.rest.trim().length > 0) {
+        if (flushed.rest.trim().length > 0 && !opts.closeSignal?.aborted) {
           const tail = parseBlock(flushed.rest);
           if (tail === SSE_DONE) return;
           if (tail !== undefined) yield tail;
@@ -63,11 +71,14 @@ export async function* parseSse(
       bufEnd = rest.slice(-3);
       assertEventSize(buf, maxChars);
       for (const item of items) {
+        // After close(), don't keep handing out events already parsed from this chunk.
+        if (opts.closeSignal?.aborted) return;
         if (item === SSE_DONE) return;
         yield item;
       }
     }
   } finally {
+    opts.closeSignal?.removeEventListener("abort", onClose);
     try {
       await reader.cancel();
     } catch {

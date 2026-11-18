@@ -176,4 +176,42 @@ describe("abort", () => {
     await expect(pending).resolves.toMatchObject({ done: true });
     expect(cancelled).toBe(true);
   });
+
+  it("stops yielding events already buffered from the current chunk after close()", async () => {
+    const ev = (o: unknown) => `data: ${JSON.stringify(o)}\n\n`;
+    const created = { type: "response.created", response: { id: "r", status: "in_progress", output: [] } };
+    const delta = (d: string) => ({ type: "response.output_text.delta", output_index: 0, content_index: 0, delta: d });
+    // One chunk carrying several events (TCP coalescing), then the socket hangs open.
+    const oneChunk =
+      ev(created) + ev(delta("A")) + ev(delta("B")) + ev(delta("C")) + ev({ type: "response.completed", response: completedResponse });
+    let cancelled = false;
+    const { fetch } = mockFetch(
+      () =>
+        new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode(oneChunk));
+            },
+            cancel() {
+              cancelled = true;
+            },
+          }),
+          { headers: { "content-type": "text/event-stream", "x-request-id": "req_test" } },
+        ),
+    );
+    const stream = await new SpaceXSI({ apiKey: "test-key", fetch, maxRetries: 0 }).responses.create({
+      ...createBody,
+      stream: true,
+    });
+    const seen: Array<string> = [];
+    stream.on("text", (t) => {
+      seen.push(t);
+      if (seen.length === 1) void stream.close();
+    });
+    await expect(stream.done()).rejects.toSatisfy(
+      (err: unknown) => APIError.is(err) && err.isAbort(),
+    );
+    expect(seen).toEqual(["A"]);
+    expect(cancelled).toBe(true);
+  });
 });
